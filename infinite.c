@@ -41,12 +41,13 @@ int main(int argc, char * argv[])
 	
 
 	int value;
-	current_token = get_token(fpRead,fpWrite);
+	while( (current_token = get_token(fpRead,fpWrite)) != EOF ){
 
-	while ( current_token != EOS ) {
-		value = expr(fpRead, fpWrite);
-		fprintf( stderr, "\nValue = %d\n", value );
-		fprintf( fpWrite, "\nValue = %d\n", value );
+		while ( current_token != EOS ) {
+			value = expr(fpRead, fpWrite);
+			fprintf( stderr, "\nValue = %d\n", value );
+			fprintf( fpWrite, "\nValue = %d\n", value );
+		}
 	}
 }
 
