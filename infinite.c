@@ -8,12 +8,12 @@
 #define NUM	258
 
 // prototypes 
-int expr();
-int term();
-int factor();
+int expr( FILE *fpRead, FILE *fpWrite );
+int term( FILE *fpRead, FILE *fpWrite );
+int factor( FILE *fpRead, FILE *fpWrite );
 void error( char * );
-int get_token();
-void match( int );
+int get_token( FILE *fpRead, FILE *fpWrite );
+void match( int, FILE *fpRead, FILE *fpWrite );
 
 
 // global communication variables
@@ -21,41 +21,68 @@ int current_token;
 int current_attribute;
 
 /* bounded memory calculator */
-int main()
+int main(int argc, char * argv[])
 {
-	int value;
+	
+	FILE *fpRead, *fpWrite;
+        if (argc < 3) {
+                fprintf(stderr,"Not enough arguments\n");
+                exit(1);
+        }
+        if (!(fpRead = fopen(argv[1],"r"))) {
+                fprintf(stderr,"Cannot open file %s\n",argv[1]);
+                exit(1);
+        }
+        if (!(fpWrite = fopen(argv[2],"w"))) {
+                fprintf(stderr,"Cannot open file %s\n",argv[2]);
+                exit(1);
+        }
 
-	current_token = get_token();
+	
+
+	int value;
+	current_token = get_token(fpRead,fpWrite);
+
 	while ( current_token != EOS ) {
-		value = expr();
+		value = expr(fpRead, fpWrite);
 		fprintf( stderr, "\nValue = %d\n", value );
+		fprintf( fpWrite, "\nValue = %d\n", value );
 	}
 }
 
 /* calculator */
 
-// handles addition
-int expr()
+// handles addition and subtraction
+int expr(FILE *fpRead, FILE *fpWrite)
 {
-	int value = term();
+	int value = term(fpRead, fpWrite);
 	while (1) {
 		if ( current_token == '+' ) {
-			match( '+' );
-			value += term();
+			match( '+', fpRead, fpWrite);
+			value += term(fpRead, fpWrite);
+		}
+		else if ( current_token == '-' ) {
+			match( '-', fpRead, fpWrite);
+			value -= term(fpRead, fpWrite);
+
 		}
 		else break;
 	}
 	return value;
 }
 
-// handles multiplication
-int term()
+// handles multiplication and division
+int term(FILE *fpRead, FILE *fpWrite)
 {
-	int value = factor();
+	int value = factor(fpRead, fpWrite);
 	while (1) {
 		if ( current_token == '*' ) {
-			match( '*' );
-			value *= factor();
+			match( '*', fpRead, fpWrite );
+			value *= factor(fpRead, fpWrite);
+		}
+		if ( current_token == '/' ) {
+			match( '/', fpRead, fpWrite );
+			value /= factor(fpRead, fpWrite);
 		}
 		else break;
 	}
@@ -63,29 +90,29 @@ int term()
 }
 
 // handles brackets and numbers
-int factor()
+int factor(FILE *fpRead, FILE *fpWrite)
 {
 	int value;
 
 	if ( current_token == '(' ) {
-		match( '(' );
-		value = expr();
-		match( ')' );
+		match( '(', fpRead, fpWrite );
+		value = expr(fpRead, fpWrite);
+		match( ')', fpRead, fpWrite );
 		return value;
 	}
 	else if ( current_token == NUM ) {
 		value = current_attribute;
-		match( NUM );
+		match( NUM, fpRead, fpWrite );
 		return value;
 	}
 	else error( "Unexpected token in factor()" );
 }
 
 /* match expected token */
-void match( int expected_token )
+void match( int expected_token, FILE *fpRead, FILE *fpWrite)
 {
 	if ( current_token == expected_token ) {
-		current_token = get_token();
+		current_token = get_token(fpRead, fpWrite);
 	}
 	else {
 		error("Unexpected token in match" );
@@ -94,40 +121,42 @@ void match( int expected_token )
 
 
 /* get next token */
-int get_token()
+int get_token(FILE *fpRead, FILE *fpWrite)
 {
 	int c;		// current character from the stream
 	int value;	// value of a number
-
-	while (1) {
-		switch ( c = getchar() ) {
-		case '+': case '*': case '(': case ')':
-#ifdef DEBUG
+	//printf("HERE\n");
+	while ( 1 ) {
+		//printf("HERE\n");
+		c = fgetc(fpRead);
+		//c = fgetc(stdin);
+				
+		if (c == '+' || c == '-' || c == '*' || c == '(' || c == ')' || c == '/' ) {
 			fprintf( stderr, "[OP:%c]", c );
-#endif
+			fprintf( fpWrite, "[OP:%c]", c );
 			return c;	// return operators and brackets as is
-		case ' ': case '\t':
+		}
+	
+		else if ( c == ' ' || c == '\t' )
 			continue;	// ignore spaces and tabs
-		default:
-			if ( isdigit(c) ) {
-				value = c - '0';
-				while ( isdigit( c = getchar() )) {
-					value = value * 10 + (c - '0');
-				}
-				ungetc( c, stdin );
-#ifdef DEBUG
-				fprintf( stderr, "[NUM:%d]", value );
-#endif
-				current_attribute = value;
-				return NUM;
+			
+		else if ( isdigit(c) ) {
+			value = c - '0';
+			while ( isdigit( c = fgetc(fpRead) )) {
+				value = value * 10 + (c - '0');
 			}
-			else if ( c == '\n' ) {
-				return EOS;
-			}
-			else {
-				fprintf( stderr, "{%c}", c );
-				error( "Unknown token" );
-			}
+			ungetc( c, fpRead );
+			fprintf( stderr, "[NUM:%d]", value );
+			fprintf( fpWrite, "[NUM:%d]", value );
+			current_attribute = value;
+			return NUM;
+		}
+	
+		else if ( c == '\n' )
+			return EOS;
+		else {
+			fprintf( stderr, "{%c}", c );
+			error( "Unknown token" );
 		}
 	}
 }
