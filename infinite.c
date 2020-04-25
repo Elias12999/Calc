@@ -106,7 +106,12 @@ int factor(FILE *fpRead, FILE *fpWrite)
 		match( NUM, fpRead, fpWrite );
 		return value;
 	}
-	else error( "Unexpected token in factor()" );
+	else{
+		printf("Error: current_token is ");
+		printf("%i", current_token);
+		printf("\n");
+		error( "Unexpected token in factor()" );
+	}
 }
 
 /* match expected token */
@@ -126,11 +131,11 @@ int get_token(FILE *fpRead, FILE *fpWrite)
 {
 	int c;		// current character from the stream
 	int value;	// value of a number
-	//printf("HERE\n");
+	
 	while ( 1 ) {
-		//printf("HERE\n");
+		
 		c = fgetc(fpRead);
-		//c = fgetc(stdin);
+		
 				
 		if (c == '+' || c == '-' || c == '*' || c == '(' || c == ')' || c == '/' ) {
 			fprintf( stderr, "[OP:%c]", c );
