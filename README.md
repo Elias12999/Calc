@@ -1,2 +1,0 @@
-# Calc
-Elias was here
